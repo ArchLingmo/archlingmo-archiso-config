@@ -126,7 +126,7 @@ iso: $(OUT_DIR)
 			exit 1; \
 		}; \
 		mkdir -p "$(WORK_DIR)"; \
-		if [ "$(FORCE_REBUILD)" = "1" ]; then "$(SUDO)" rm -rf "$(WORK_DIR)/x86_64" "$(WORK_DIR)/iso" && "$(SUDO)" rm -f "$(WORK_DIR)"/*._*; fi; \
+		if [ "$(FORCE_REBUILD)" = "1" ]; then "$(SUDO)" rm -rf "$(WORK_DIR)/x86_64" "$(WORK_DIR)/iso" && "$(SUDO)" rm -f "$(WORK_DIR)"/*._* "$(WORK_DIR)/build_date"; fi; \
 		rm -f "$(WORK_DIR)/iso.pacman.conf"; \
 		"$(SUDO)" mkarchiso -v -w "$(WORK_DIR)" -o "$(OUT_DIR)" profile; \
 		if [ "$(FIX_OWNERSHIP)" = "1" ]; then "$(SUDO)" chown -R "$(HOST_UID):$(HOST_GID)" "$(OUT_DIR)"; fi
@@ -153,7 +153,7 @@ iso-local: pkgs $(OUT_DIR)
 			mv "$$tmp" "$$pac"; \
 			fi; \
 		mkdir -p "$(WORK_DIR)"; \
-		if [ "$(FORCE_REBUILD)" = "1" ]; then "$(SUDO)" rm -rf "$(WORK_DIR)/x86_64" "$(WORK_DIR)/iso" && "$(SUDO)" rm -f "$(WORK_DIR)"/*._*; fi; \
+		if [ "$(FORCE_REBUILD)" = "1" ]; then "$(SUDO)" rm -rf "$(WORK_DIR)/x86_64" "$(WORK_DIR)/iso" && "$(SUDO)" rm -f "$(WORK_DIR)"/*._* "$(WORK_DIR)/build_date"; fi; \
 		rm -f "$(WORK_DIR)/iso.pacman.conf"; \
 		pac_build="$(WORK_DIR)/pacman.local.conf"; \
 		sed 's#^Server = file:///opt/lingmo-localrepo$$#Server = file://$(LOCAL_REPO_DIR)#' "$$pac" >"$$pac_build"; \
@@ -186,7 +186,7 @@ iso-container: $(OUT_DIR)
 			-v "$(CURDIR)":/config:ro \
 			-v "$(OUT_DIR)":/out \
 			-v "$(WORK_DIR)":/work \
-			"$(CONTAINER_IMAGE)" sh -lc 'if [ "$$FORCE_REBUILD" = "1" ]; then rm -rf /work/x86_64 /work/iso /work/*._* /work/iso.pacman.conf; fi; mkarchiso -v -w /work -o /out /config/profile && chown -R "$$HOST_UID:$$HOST_GID" /out /work'
+			"$(CONTAINER_IMAGE)" sh -lc 'if [ "$$FORCE_REBUILD" = "1" ]; then rm -rf /work/x86_64 /work/iso /work/*._* /work/iso.pacman.conf /work/build_date; fi; mkarchiso -v -w /work -o /out /config/profile && chown -R "$$HOST_UID:$$HOST_GID" /out /work'
 
 iso-container-local: localrepo-from-outputs $(OUT_DIR)
 	@set -eu; \

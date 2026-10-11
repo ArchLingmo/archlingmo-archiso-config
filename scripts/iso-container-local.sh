@@ -6,7 +6,7 @@ host_uid="${HOST_UID:-0}"
 host_gid="${HOST_GID:-0}"
 
 if [ "$force_rebuild" = "1" ]; then
-  rm -rf /work/x86_64 /work/iso /work/*._* /work/iso.pacman.conf /work/profile-tmp || true
+  rm -rf /work/x86_64 /work/iso /work/*._* /work/iso.pacman.conf /work/profile-tmp /work/build_date || true
 fi
 
 rm -rf /work/profile-tmp
