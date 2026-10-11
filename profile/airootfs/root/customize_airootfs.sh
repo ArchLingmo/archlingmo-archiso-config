@@ -19,6 +19,10 @@ if id -u lingmo >/dev/null 2>&1; then
   cp -a /etc/skel/. /home/lingmo/ 2>/dev/null || true
   install -d -m 0755 -o lingmo -g lingmo /home/lingmo/Desktop
   chown -R lingmo:lingmo /home/lingmo
+  # Rootless Podman (Linux boxes of lingmo-winrun) needs subordinate IDs; users
+  # made by the installer get them from useradd, the live user doesn't
+  grep -q '^lingmo:' /etc/subuid 2>/dev/null || usermod --add-subuids 100000-165535 lingmo
+  grep -q '^lingmo:' /etc/subgid 2>/dev/null || usermod --add-subgids 100000-165535 lingmo
 fi
 
 if ! command -v calamares >/dev/null 2>&1; then
