@@ -35,6 +35,11 @@ if ! command -v calamares >/dev/null 2>&1; then
   pacman-key --init
   pacman-key --populate archlinux archlinuxcn || pacman-key --populate archlinux
 
+  # What the image has before the build tools: whatever gets added from here on
+  # (git, base-devel, Calamares' makedepends...) is removed again at the end,
+  # except what Calamares itself needs at run time
+  pacman -Qq | sort > /tmp/packages-before
+
   pacman --config "$pacman_conf" --cachedir "$cache_dir" -Syy --noconfirm --needed git base-devel
 
   if ! id -u builder >/dev/null 2>&1; then
@@ -61,6 +66,22 @@ EOF
 
   calamares_pkg="$(ls -1 /tmp/aur/calamares/calamares-*.pkg.tar.* | grep -v -- '-debug-' | head -n 1)"
   pacman --config "$pacman_conf" --cachedir "$cache_dir" -U --noconfirm "$calamares_pkg"
+
+  # Drop the build tools (gcc, cmake, gdb, boost...: ~500 MiB installed) so the
+  # ISO stays under GitHub's 2 GiB release limit. Everything added since the
+  # snapshot becomes a dependency; whatever nothing needs is removed.
+  pacman -Qq | sort | comm -13 /tmp/packages-before - | grep -vx calamares > /tmp/packages-added || true
+  if [ -s /tmp/packages-added ]; then
+    pacman -D --asdeps $(cat /tmp/packages-added) >/dev/null
+    pacman -D --asexplicit calamares >/dev/null
+    # Only packages added for the build: something already in the image is never touched
+    while :; do
+      unneeded="$( (pacman -Qtdq || true) | sort | comm -12 - /tmp/packages-added)"
+      [ -n "$unneeded" ] || break
+      pacman -R --noconfirm $unneeded
+    done
+  fi
+  rm -f /tmp/packages-before /tmp/packages-added
 
   # The build user and its files were only needed to build Calamares: don't ship
   # them (the user would show up on the login screen of installed systems)
