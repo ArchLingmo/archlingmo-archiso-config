@@ -107,6 +107,7 @@ xf86-video-qxl
 
 
 # fonts
+inter-font
 ttf-dejavu
 wqy-zenhei
 
