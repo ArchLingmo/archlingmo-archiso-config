@@ -1,0 +1,78 @@
+# Builds the ArchLingmo live ISO from [archlingmo] and publishes it as a GitHub
+# release (the site reads the latest release by itself).
+#
+#   git tag 2026.10.24 && git push origin 2026.10.24
+#
+# The tag is the ISO date (YYYY.MM.DD, as scripts/release-iso.sh and the site
+# expect): the build runs with SOURCE_DATE_EPOCH at that date, so the ISO is
+# named archlingmo-<tag>-x86_64.iso whatever day the runner builds it.
+# Manual runs (workflow_dispatch) take the tag as input, today (UTC) by default.
+name: Release ISO
+
+on:
+  push:
+    tags:
+      - '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag YYYY.MM.DD (empty, today in UTC); the ISO is dated after it
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-iso
+  cancel-in-progress: false
+
+jobs:
+  iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_RELEASE_REPO: ${{ github.repository }}
+    steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/share/swift \
+            /usr/local/share/powershell /usr/local/share/chromium /opt/microsoft /opt/google
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Resolve the release tag
+        id: version
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then tag=$GITHUB_REF_NAME; else tag=${INPUT_TAG:-$(date -u +%Y.%m.%d)}; fi
+          [[ "$tag" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}$ ]] || { echo "::error::tag must be YYYY.MM.DD, got '$tag'"; exit 1; }
+          epoch=$(date -u -d "${tag//./-} 12:00" +%s) || { echo "::error::$tag is not a date"; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "epoch=$epoch" >> "$GITHUB_OUTPUT"
+          echo "release $tag (SOURCE_DATE_EPOCH=$epoch)"
+
+      - name: Build the ISO (make iso-container FORCE_REBUILD=1)
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.version.outputs.epoch }}
+        run: |
+          make iso-container FORCE_REBUILD=1 CONTAINER_ENGINE=docker \
+            CONTAINER_RUN_FLAGS="--privileged -e SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
+          ls -l out/*.iso
+          df -h /
+
+      - name: Size gate, checksum, package list and release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_TARGET: ${{ github.sha }}
+        run: scripts/release-iso.sh "out/archlingmo-$TAG-x86_64.iso" "$TAG"

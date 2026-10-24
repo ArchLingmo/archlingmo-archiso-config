@@ -1,0 +1,92 @@
+# Reusable check for one Lingmo component (called by each repo's ci.yml):
+# builds it in archlinux:latest against [archlingmo] the way the workspace's
+# scripts/mkpkg.sh does, then runs ctest when it has tests. Publishes nothing.
+# The logic is ci/component-check.sh, which also runs locally under docker.
+name: Component check
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        description: Repo column of ci/packaging/components.conf (default, the calling repository's name)
+        type: string
+        default: ''
+      tests:
+        description: Build the tests (-DBUILD_TESTING=ON) and run ctest when the component has any
+        type: boolean
+        default: true
+      extra-packages:
+        description: Extra pacman packages, space separated (e.g. test-only deps)
+        type: string
+        default: ''
+      ci-ref:
+        description: Ref of devalexandre/archlingmo-archiso-config to take ci/ from; keep it equal to the @ref in `uses:`
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ inputs.component || github.event.repository.name }}
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 90
+    env:
+      COMPONENT: ${{ inputs.component || github.event.repository.name }}
+      TESTS: ${{ inputs.tests && '1' || '0' }}
+      EXTRA_PACKAGES: ${{ inputs.extra-packages }}
+      CHECK: .archlingmo-ci/ci/component-check.sh
+    steps:
+      - name: Check out the CI scripts
+        uses: actions/checkout@v4
+        with:
+          repository: devalexandre/archlingmo-archiso-config
+          ref: ${{ inputs.ci-ref }}
+          path: .archlingmo-ci
+          persist-credentials: false
+
+      - name: Cache key (one per component and week)
+        id: key
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the pacman cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /var/cache/pacman/pkg
+          key: pacman-${{ env.COMPONENT }}-${{ steps.key.outputs.week }}
+          restore-keys: pacman-${{ env.COMPONENT }}-
+
+      - name: Add [archlingmo] and update
+        run: bash "$CHECK" setup "$COMPONENT"
+
+      - name: Check out ${{ env.COMPONENT }}
+        uses: actions/checkout@v4
+        with:
+          path: src
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: bash "$CHECK" deps "$COMPONENT" src
+
+      - name: Prune the pacman cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: pacman -Sc --noconfirm   # keep only the installed versions in the cache
+
+      - name: Save the pacman cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: /var/cache/pacman/pkg
+          key: pacman-${{ env.COMPONENT }}-${{ steps.key.outputs.week }}
+
+      - name: Build (cmake + ninja, as mkpkg)
+        run: bash "$CHECK" build "$COMPONENT" src
+
+      - name: Test (ctest)
+        run: bash "$CHECK" test "$COMPONENT" src
