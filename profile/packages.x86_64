@@ -13,7 +13,6 @@ iptables
 less
 linux
 linux-firmware
-linux-firmware-marvell
 man-db
 man-pages
 mkinitcpio
