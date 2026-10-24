@@ -129,3 +129,7 @@ gst-plugin-pipewire
 # lingmo: the metapackage pulls the whole Qt 6 desktop (session, shell, apps,
 # artwork, SDDM theme, konsole) from [archlingmo] (devalexandre/archlingmo-repo)
 lingmo-desktop
+# OCR languages for the screenshot tool: listed so tesseract doesn't pull the first
+# provider of tesseract-data (Afrikaans) and the orientation data
+tesseract-data-por
+tesseract-data-eng
