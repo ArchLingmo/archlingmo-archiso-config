@@ -156,7 +156,8 @@ iso-local: pkgs $(OUT_DIR)
 		if [ "$(FORCE_REBUILD)" = "1" ]; then "$(SUDO)" rm -rf "$(WORK_DIR)/x86_64" "$(WORK_DIR)/iso" && "$(SUDO)" rm -f "$(WORK_DIR)"/*._* "$(WORK_DIR)/build_date"; fi; \
 		rm -f "$(WORK_DIR)/iso.pacman.conf"; \
 		pac_build="$(WORK_DIR)/pacman.local.conf"; \
-		sed 's#^Server = file:///opt/lingmo-localrepo$$#Server = file://$(LOCAL_REPO_DIR)#' "$$pac" >"$$pac_build"; \
+		sed 's#^Server = file:///opt/lingmo-localrepo$$#Server = file://$(LOCAL_REPO_DIR)#' "$$pac" \
+			| awk '/^\[archlingmo-craft\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' >"$$pac_build"; \
 		"$(SUDO)" mkarchiso -v -w "$(WORK_DIR)" -o "$(OUT_DIR)" -C "$$pac_build" "$(PROFILE_TMP)"; \
 		if [ "$(FIX_OWNERSHIP)" = "1" ]; then "$(SUDO)" chown -R "$(HOST_UID):$(HOST_GID)" "$(OUT_DIR)"; fi
 

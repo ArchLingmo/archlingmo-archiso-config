@@ -44,7 +44,10 @@ fi
 # Do NOT write this to /work/iso.pacman.conf: mkarchiso itself copies the
 # custom pacman.conf into that path and will overwrite it.
 pac_build=/work/pacman.local.conf
-sed 's#^Server = file:///opt/lingmo-localrepo$#Server = file:///localrepo#' "$pac" >"$pac_build"
+# [archlingmo-craft] (optional Store apps) is for the live/installed system only:
+# none of its packages go in the ISO, so the build doesn't sync it.
+sed 's#^Server = file:///opt/lingmo-localrepo$#Server = file:///localrepo#' "$pac" \
+  | awk '/^\[archlingmo-craft\]/ { skip = 1; next } /^\[/ { skip = 0 } !skip' >"$pac_build"
 
 # Prefer locally-built package naming when using the embedded repo.
 pkgs=/work/profile-tmp/packages.x86_64
