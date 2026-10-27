@@ -96,10 +96,13 @@ if [ -n "$against" ]; then
     summary "" "<details><summary>Package changes since $against</summary>" "" '```' "${diff_out:-(none)}" '```' "</details>"
 fi
 
-# Same text as before the CI existed; the site takes the SHA-256 from here
+# Same text as before the CI existed; the site takes the SHA-256 from here.
+# What changed in this ISO: release-notes/<version>.md (or RELEASE_NOTES_FILE), when present
+notes_file="${RELEASE_NOTES_FILE:-$(dirname "$0")/../release-notes/$version.md}"
 release_notes() {
     # shellcheck disable=SC2016 # literal backticks: markdown code span
     printf 'Imagem live do ArchLingmo %s (x86-64): o desktop Lingmo em Qt 6, sobre o Arch Linux.\n\nSHA-256: `%s`\n\nSite: https://devalexandre.github.io/archlingmo/\n' "$version" "$sha"
+    if [ -f "$notes_file" ]; then printf '\n'; cat "$notes_file"; fi
 }
 
 files=("$iso" "$iso.sha256" "$pkglist")
