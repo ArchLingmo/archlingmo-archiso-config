@@ -20,7 +20,7 @@ on:
         type: string
         default: ''
       ci-ref:
-        description: Ref of devalexandre/archlingmo-archiso-config to take ci/ from; keep it equal to the @ref in `uses:`
+        description: Ref of ArchLingmo/archlingmo-archiso-config to take ci/ from; keep it equal to the @ref in `uses:`
         type: string
         default: main
 
@@ -42,7 +42,7 @@ jobs:
       - name: Check out the CI scripts
         uses: actions/checkout@v4
         with:
-          repository: devalexandre/archlingmo-archiso-config
+          repository: ArchLingmo/archlingmo-archiso-config
           ref: ${{ inputs.ci-ref }}
           path: .archlingmo-ci
           persist-credentials: false
