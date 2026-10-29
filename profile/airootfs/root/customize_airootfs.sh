@@ -92,3 +92,12 @@ EOF
   userdel -r builder 2>/dev/null || true
   rm -rf /tmp/aur "$cache_dir" "$pacman_conf"
 fi
+
+# Packages nothing needs, not even as an optional dependency: base-devel and its
+# chain (gdb, boost-libs, texinfo... ~110 MiB) stayed behind as orphans in the
+# 2026.10.25 and 10.27 images. dkms keeps gcc and make
+while :; do
+  orphans="$(pacman -Qttdq || true)"
+  [ -n "$orphans" ] || break
+  pacman -Rn --noconfirm $orphans
+done
